@@ -1,0 +1,5 @@
+outs:
+- md5: b7646a7b82c36e1e565c2e6bfa1e52a8
+  size: 528
+  hash: md5
+  path: .cred.json
