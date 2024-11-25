@@ -4,17 +4,18 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import URL
 import logging
 import traceback
+from typing import Generator
 
 logger = logging.getLogger(__name__)
 
 
 class DBManager:
-    def __init__(self, db_user: str, db_password: str, 
+    def __init__(self, db_user: str, db_password: str,
                  db_host: str, db_port: str, db_database: str
                  ):
         """
         Initializes the DBManager with the connection details for the database.
-        
+
         Args:
             db_user (str): Database user.
             db_password (str): Database password.
@@ -38,17 +39,20 @@ class DBManager:
                 pool_size=20,
                 max_overflow=10,
             )
-            logger.info(f"Successfully initialized DBManager for database '{db_database}'.")
-        except Exception as e:
-            logger.error(f"Failed to initialize DBManager for database '{db_database}': {traceback.format_exc()}")
-            raise 
+            logger.info(
+                f"Successfully initialized DBManager for database '{db_database}'.")
+        except Exception:
+            logger.error(
+                f"Failed to initialize DBManager for database '{db_database}': {traceback.format_exc()}")
+            raise
 
-        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        self.SessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=self.engine)
 
-    def get_db(self) -> Session:
+    def get_db(self) -> Generator:
         """
         Yields a database session, ensuring it is properly closed after use.
-        
+
         Yields:
             Session: A SQLAlchemy session instance to interact with the database.
         """
@@ -58,6 +62,7 @@ class DBManager:
         finally:
             db.close()
             logger.info(f"Closed session for database '{self.db_database}'.")
+
 
 try:
     POST_DB = DBManager(

@@ -1,6 +1,9 @@
 import streamlit as st
 from streamlit_utils.cache_data import get_post_db
+from streamlit_utils.cache_ressource import get_vectorial_db
 import logging
+import os
+from hashlib import md5
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
@@ -23,10 +26,13 @@ if "posts" not in st.session_state:
         logger.info("Chargement des posts depuis la base de données.")
     except Exception as e:
         logger.error(f"Erreur lors du chargement des posts : {e}")
-        st.error("Une erreur est survenue lors du chargement des données. Veuillez réessayer.")
+        st.error(
+            "Une erreur est survenue lors du chargement des données. Veuillez réessayer.")
         st.stop()
 
 # Fonctions utilitaires
+
+
 def next_index():
     """
     Passe à l'index suivant. Si only_one_modify est activé, passe à la fin de la liste.
@@ -48,12 +54,16 @@ def save_post(content: str, tasks: list):
         tasks (list): Liste des tâches associées.
     """
     try:
-        st.session_state.posts.loc[st.session_state.index_post, "content"] = content
-        st.session_state.posts.loc[st.session_state.index_post, "tasks"] = str(tasks)
+        st.session_state.posts.loc[st.session_state.index_post,
+                                   "content"] = content
+        st.session_state.posts.loc[st.session_state.index_post, "tasks"] = str(
+            tasks)
         st.success("Les modifications ont été sauvegardées.")
-        logger.info(f"Post {st.session_state.index_post} sauvegardé avec succès.")
+        logger.info(
+            f"Post {st.session_state.index_post} sauvegardé avec succès.")
     except Exception as e:
-        logger.error(f"Erreur lors de la sauvegarde du post {st.session_state.index_post} : {e}")
+        logger.error(
+            f"Erreur lors de la sauvegarde du post {st.session_state.index_post} : {e}")
         st.error("Erreur lors de la sauvegarde. Veuillez réessayer.")
 
 
@@ -72,8 +82,9 @@ def modify_post(idx):
 
 
 if len(st.session_state.posts) > st.session_state.index_post:
-    have_to_expanded = (not st.session_state.only_one_modify) and (st.session_state.index_post == 0)
-    
+    have_to_expanded = (not st.session_state.only_one_modify) and (
+        st.session_state.index_post == 0)
+
     with st.expander("Explication", expanded=have_to_expanded):
         st.markdown("""
         # Formattage des posts
@@ -99,19 +110,21 @@ if len(st.session_state.posts) > st.session_state.index_post:
         """)
 
     post = st.session_state.posts.iloc[st.session_state.index_post]
-    
+
     try:
-        st.markdown(f"### {st.session_state.index_post}/ **Nom de l'organisation:** {post.title}")
-        
+        st.markdown(
+            f"### {st.session_state.index_post}/ **Nom de l'organisation:** {post.title}")
+
         if isinstance(post.tasks, str) and len(post.tasks) == 0:
             tasks_content = post.tasks
         elif isinstance(eval(post.tasks), list):
             tasks_content = "*" + "*".join(eval(post.tasks))
         else:
-            raise ValueError(f"Type inattendu pour post.tasks : {type(post.tasks)}")
+            raise ValueError(
+                f"Type inattendu pour post.tasks : {type(post.tasks)}")
 
         content = st.text_area(
-            label="Description", 
+            label="Description",
             value=post.content + tasks_content
         )
         list_content = content.split("*")
@@ -131,7 +144,8 @@ if len(st.session_state.posts) > st.session_state.index_post:
             next_index()
 
     except Exception as e:
-        logger.error(f"Erreur lors de l'affichage ou de la modification du post : {e}")
+        logger.error(
+            f"Erreur lors de l'affichage ou de la modification du post : {e}")
         st.error("Une erreur est survenue. Veuillez vérifier le format du post.")
 else:
     st.markdown("## Récapitulatif de fin !")
@@ -148,8 +162,45 @@ else:
             for task in tasks:
                 st.markdown(f"- {task}")
         except Exception as e:
-            logger.error(f"Erreur lors de l'évaluation des tâches pour le post {idx} : {e}")
+            logger.error(
+                f"Erreur lors de l'évaluation des tâches pour le post {idx} : {e}")
             st.error(f"Erreur dans les tâches du post {idx}.")
 
         if st.button(f"Reprendre le post {idx}"):
             modify_post(idx)
+    st.markdown("""---""")
+    if st.button("Passez au matchmaking ?", use_container_width=True):
+        vectorial_db = get_vectorial_db()
+        query = {
+            "_source": "id",
+            'query': {
+                'match_all': {}
+            }
+        }
+        response = vectorial_db.search(
+            body=query,
+            index='post-decomposed'
+        )
+        all_ids = [h['_source']["id"] for h in response["hits"]["hits"]]
+
+        docs = st.session_state.posts.copy()
+        docs.tasks = docs.tasks.map(eval)
+        docs = docs.explode("tasks")
+        docs = docs[['id', 'content', 'title', 'updated_at',
+                     'number_departement', 'tasks']].to_dict(orient="records")
+        # TODO récupère les id du sheet
+        for d in docs:
+            try:
+                id_name = str(d["id"]) + d["tasks"]
+                d["id"] = md5(id_name.encode()).hexdigest()
+                if not d["id"] in all_ids:
+                    vectorial_db.index(
+                        index=os.environ["INDEX_POST"],
+                        body=d
+                    )
+                else:
+                    logger.info("Id existe déjà: " + str(d["id"]))
+            except Exception:
+                st.error(
+                    "Attention la taches suivantes ne s'est pas intégrer:" + str(d))
+        st.success("Succed to upload in db !")

@@ -7,7 +7,7 @@ setup_logger()
 logger = logging.getLogger(__name__)
 
 if not "EDU_DB_USER" in os.environ:
-    from dotenv import load_dotenv    
+    from dotenv import load_dotenv
     if load_dotenv('./src/app/.env'):
         logger.info("Add credential")
     else:
