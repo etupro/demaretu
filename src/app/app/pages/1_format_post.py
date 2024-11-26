@@ -149,6 +149,11 @@ if len(st.session_state.posts) > st.session_state.index_post:
         st.error("Une erreur est survenue. Veuillez vérifier le format du post.")
 else:
     st.markdown("## Récapitulatif de fin !")
+    docs = st.session_state.posts.copy()
+    docs.tasks = docs.tasks.map(eval)
+    docs = docs.explode("tasks")
+    st.dataframe(docs[docs.columns[::-1]])
+
     for idx in st.session_state.posts.index:
         post = st.session_state.posts.iloc[idx]
         st.markdown(f"""
@@ -159,8 +164,11 @@ else:
         """)
         try:
             tasks = eval(post.tasks)
-            for task in tasks:
-                st.markdown(f"- {task}")
+            if len(tasks):
+                for task in tasks:
+                    st.markdown(f"- {task}")
+            else:
+                st.error("Il n'y a pas de tâche ici !")
         except Exception as e:
             logger.error(
                 f"Erreur lors de l'évaluation des tâches pour le post {idx} : {e}")
@@ -169,7 +177,7 @@ else:
         if st.button(f"Reprendre le post {idx}"):
             modify_post(idx)
     st.markdown("""---""")
-    if st.button("Passez au matchmaking ?", use_container_width=True):
+    if st.button("Sauvez dans la bd ?", use_container_width=True):
         vectorial_db = get_vectorial_db()
         query = {
             "_source": "id",
