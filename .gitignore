@@ -3,3 +3,5 @@
 **/__pycache__
 **/*.log
 convention_nommage.md
+**/hide-*
+src/RAG
