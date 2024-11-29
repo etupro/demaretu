@@ -15,9 +15,13 @@ def setup_logger():
 
 setup_logger()
 
+logger = logging.getLogger(__name__)
+
 if "MAMBA_EXE" in os.environ:
+    logger.info("Run in local")
     date = datetime.now()
     data_path = Path("data")
 else:
+    logger.info("Run in server")
     date = datetime.strptime(os.environ["DATE_FOLDER"], '%Y-%m-%d')
     data_path = Path("/app/data/to_ingest")

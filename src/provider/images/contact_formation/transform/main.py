@@ -9,27 +9,24 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main(date):
     try:
         logger.info("Debut de la tâches")
         date = date.strftime("%Y/%m/%d")
 
         data_raw_path = os.path.join(
-            data_path, "raw", date, "formation.csv")
+            data_path, "raw", date, "formations.csv")
         data_processed_path = os.path.join(
             data_path, "processed", date)
 
         # Get data:
         df_raw = pd.read_csv(data_raw_path)
-
         cf = CleanerFormation(df=df_raw)
-        
         df_processed = cf()
 
         os.makedirs(data_processed_path, exist_ok=True)
-
         df_processed.to_parquet(os.path.join(
-            data_processed_path, "formation.parquet"))
+            data_processed_path, "formations.parquet"))
 
     except Exception:
         logger.error(traceback.format_exc())
@@ -37,4 +34,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(date)

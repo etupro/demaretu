@@ -4,8 +4,9 @@ RUN apt-get update -y && apt-get install -y libpq-dev gcc
 
 WORKDIR /app
 
+COPY ./utils ./utils
 COPY ./main.py ./main.py
-COPY ./build_features.py ./build_features.py
+COPY ./cleaner.py ./cleaner.py
 COPY ./requirements.txt ./requirements.txt
 
 RUN mkdir -p /app/data/to_ingest
