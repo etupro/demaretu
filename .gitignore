@@ -2,6 +2,7 @@
 **/*.pyc
 **/__pycache__
 **/*.log
+**/logs
 convention_nommage.md
 **/hide-*
 src/RAG
