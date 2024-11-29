@@ -7,3 +7,4 @@ convention_nommage.md
 **/hide-*
 src/RAG
 **/notebooks
+/data
