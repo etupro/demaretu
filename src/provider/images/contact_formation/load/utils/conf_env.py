@@ -12,6 +12,7 @@ def setup_logger():
         filemode='w'
     )
 
+
 setup_logger()
 
 logger = logging.getLogger(__name__)
