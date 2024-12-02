@@ -1,9 +1,5 @@
-greenlet==3.1.0
-numpy==2.1.1
+numpy==1.26.4
 pandas==2.2.2
-pytz==2024.2
-six==1.16.0
-typing_extensions==4.12.2
-tzdata==2024.1
-sentence-transformers
-opensearch-py
+opensearch-py==2.4.2
+sentence-transformers==3.3.0
+torch==2.3
