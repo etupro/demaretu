@@ -1,0 +1,11 @@
+pydrive2 
+gspread 
+sqlalchemy 
+psycopg2 
+opensearch-py 
+pytest-mock
+pandas 
+pyarrow
+sentence_transformers
+torch
+pyarrow

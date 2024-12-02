@@ -1,0 +1,5 @@
+outs:
+- md5: 4bd105491fcab7897b3a5a5a38f478bf
+  size: 2232
+  hash: md5
+  path: custom.yaml

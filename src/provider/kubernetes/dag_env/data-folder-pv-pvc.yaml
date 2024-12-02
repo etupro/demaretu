@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: data-folder
+  namespace: airflow
+  labels:
+    type: local
+spec:
+  storageClassName: local-path
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/home/romain/Documents/association/demaretu/data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-folder
+  namespace: airflow
+spec:
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
