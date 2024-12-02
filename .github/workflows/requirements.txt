@@ -6,3 +6,6 @@ opensearch-py
 pytest-mock
 pandas 
 pyarrow
+sentence_transformers
+torch
+pyarrow
