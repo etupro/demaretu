@@ -9,5 +9,5 @@ nui ()
     echo "$username/$1";
 }
 
-nui "load-data-formation" ./src/provider/images/contact_formation/load ;
+# nui "load-data-formation" ./src/provider/images/contact_formation/load ;
 nui "transform-data-formation" ./src/provider/images/contact_formation/transform ;
