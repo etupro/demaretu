@@ -46,7 +46,7 @@ class DriveManager:
             logger.error("Failed to authenticate with Google APIs.", exc_info=True)
             raise Exception("Authentication with Google APIs failed.") from e
 
-    def get_sheet(self, name: str):
+    def get_sheet(self, name: str, id_folder: str = None):
         """
         Opens a Google Sheet by its name.
 
@@ -61,8 +61,11 @@ class DriveManager:
         """
         try:
             logger.info(f"Attempting to open Google Sheet: {name}")
-            return self.gc.open(name)
-        except Exception as e:
+            if id_folder:
+                return self.gc.open(title=name, folder_id=id_folder)
+            else:
+                return self.gc.open(title=name)
+        except Exception:
             logger.error(f"Failed to open Google Sheet '{name}'.", exc_info=True)
             raise
 

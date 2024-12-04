@@ -1,16 +1,17 @@
 import streamlit as st
-from streamlit_utils.cache_ressource import get_vectorial_db
-from utils.matchmaking_func import get_postal_code, reverse_proposal
+from streamlit_utils.cache_ressource import get_vectorial_db, get_drive
+from utils.matchmaking_func import reverse_proposal
 import logging
-from typing import List
-import pandas as pd
-import re
 from jinja2 import Template
+import os
+import pandas as pd
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
 
 # Get ressource
+drive_client = get_drive()
+
 posts_db = get_vectorial_db(
     env_name_index="INDEX_POST",
     index_col="id",
@@ -32,6 +33,7 @@ formations_db = get_vectorial_db(
 )
 
 data_post = posts_db.get_data()
+
 
 def change_phase():
     st.session_state.match_phase = False
@@ -136,7 +138,7 @@ Ajouter les variables suivantes à votre dispositions dans le contenu du templat
 
     Blablabla
     {% for task in tasks %}
-    - {task.title} pour la missions: {task.tasks}
+    - {{task.title}} pour la missions: {{task.tasks}}
     {% endfor %}
     blablabla
 
@@ -149,18 +151,32 @@ En accord avec les noms de variables ci dessous (comme tasks, ville, etc...)
     template = st.text_area("Templates mail", value=doc)
 
     all_mail_content = []
-    for name_formation, dico in all_proposals.items():
+    for responsable, dico in all_proposals.items():
         st.markdown(f"""
 ---
                     
-## {name_formation}
+## Responsable {responsable}
 
 Voici le contenu du mail:
 """)
-        st.text_area(
-            label=f"Exemple de contenu modifiable pour {name_formation}",
+        content = st.text_area(
+            label=f"Exemple de contenu modifiable pour {responsable}",
             value=format_mail(
                 content=template,
                 data=dico
             )
         )
+        all_mail_content.append({
+            "nom_responsable": responsable,
+            "content": content
+        })
+
+    if st.button("Finito ?"):
+        df = pd.DataFrame(all_mail_content)
+        gs = drive_client.get_sheet(
+                name=os.environ['NAME_SHEET_FORMATION'],
+                id_folder=os.environ['ID_FOLDER_DEMAREDU']
+        )
+        sh1 = gs.sheet1
+        file = sh1.get_values() + df.to_numpy().tolist()
+        sh1.update(file, 'A2')
