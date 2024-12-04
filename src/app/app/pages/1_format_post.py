@@ -178,37 +178,22 @@ else:
             modify_post(idx)
     st.markdown("""---""")
     if st.button("Sauvez dans la bd ?", use_container_width=True):
-        vectorial_db = get_vectorial_db()
-        query = {
-            "_source": "id",
-            'query': {
-                'match_all': {}
-            }
-        }
-        response = vectorial_db.search(
-            body=query,
-            index='post-decomposed'
+        vectorial_db = get_vectorial_db(
+            env_name_index="INDEX_POST",
+            index_col="id",
+            other_cols=['id', 'content', 'title', 'updated_at', 'number_departement', 'tasks']
         )
-        all_ids = [h['_source']["id"] for h in response["hits"]["hits"]]
-
+        vectorial_db.create_index()
+        ids = vectorial_db.get_all_id_data()
+        # Prepare data
         docs = st.session_state.posts.copy()
         docs.tasks = docs.tasks.map(eval)
         docs = docs.explode("tasks")
         docs = docs[['id', 'content', 'title', 'updated_at',
-                     'number_departement', 'tasks']].to_dict(orient="records")
-        # TODO récupère les id du sheet
-        for d in docs:
-            try:
-                id_name = str(d["id"]) + d["tasks"]
-                d["id"] = md5(id_name.encode()).hexdigest()
-                if not d["id"] in all_ids:
-                    vectorial_db.index(
-                        index=os.environ["INDEX_POST"],
-                        body=d
-                    )
-                else:
-                    logger.info("Id existe déjà: " + str(d["id"]))
-            except Exception:
-                st.error(
-                    "Attention la taches suivantes ne s'est pas intégrer:" + str(d))
+                     'number_departement', 'tasks']]
+        docs.id = (docs.id.map(str) + docs.tasks)\
+            .map(lambda x: md5(x.encode()).hexdigest())
+        # Send data
+        df = vectorial_db.add_vector(df=docs, col="tasks")
+        vectorial_db.send_data(df=docs)
         st.success("Succed to upload in db !")
