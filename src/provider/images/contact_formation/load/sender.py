@@ -27,7 +27,8 @@ class SenderVectorDB:
     index_name_db = "index"
 
     def __init__(self, vector_col: str = None, index_col: str = None,
-                 other_cols: list = None, model: SentenceTransformer = None):
+                 other_cols: list = None, model: SentenceTransformer = None,
+                 env_name_index: str = None):
         """
         Initialize the SenderVectorDB instance with optional overrides for configuration.
 
@@ -35,6 +36,7 @@ class SenderVectorDB:
         :param index_col: Custom primary key column for indexing
         :param other_cols: List of additional metadata columns
         :param model: Custom SentenceTransformer model for embeddings
+        :param env_name_index: Name in env of target index
         """
         if vector_col is not None:
             self.vector_col = vector_col
@@ -48,8 +50,8 @@ class SenderVectorDB:
         if model is not None:
             self.model = model
 
-        if 'INDEX_FORMATION' in os.environ:
-            self.index_name_db = os.environ['INDEX_FORMATION']
+        if env_name_index in os.environ:
+            self.index_name_db = os.environ[env_name_index]
 
         try:
             option_db = eval(os.environ["OPTION_DB_VECTOR"])
@@ -81,6 +83,50 @@ class SenderVectorDB:
         self.vector_dim = max(df[self.vector_col].iloc[0].shape)
         return df
 
+    def get_all_id_data(self):
+        query = {
+            "_source": "id",
+            'query': {
+                'match_all': {}
+            }
+        }
+        response = self.db.search(
+            body=query,
+            index=self.index_name_db
+        )
+        return [h['_source']["id"] for h in response["hits"]["hits"]]
+
+    def get_data(self, cols: list = None, settings_index: dict = None):
+        if isinstance(cols, list) and all([
+                c in ([self.vector_col, self.index_col] + self.other_cols)
+                for c in cols
+            ]):
+            docs = self.db.search(
+                body={
+                    "size": 1000,
+                    "_source": cols,
+                    "query": {"match_all": {}}
+                },
+                index=self.index_name_db
+            )
+        elif isinstance(settings_index, dict):
+            docs = self.db.search(
+                body=settings_index,
+                index=self.index_name_db
+            )
+        else:
+            logger.warning("All cols are getting, here !")
+            docs = self.db.search(
+                body={
+                    "size": 1000,
+                    "query": {"match_all": {}}
+                },
+                index=self.index_name_db
+            )
+        data = docs["hits"]["hits"]
+        logger.info(f"Get {len(data)} datas")
+        return pd.DataFrame([d["_source"] for d in data])
+
     def create_index(self):
         """
         Create an OpenSearch index with the necessary mappings for vector-based search.
@@ -92,7 +138,16 @@ class SenderVectorDB:
                 properties = {
                     self.vector_col: {
                         'type': 'knn_vector',
-                        'dimension': self.vector_dim
+                        'dimension': self.vector_dim,
+                        "space_type": "cosinesimil",
+                        "method": {
+                            "name": "hnsw",
+                            "engine": "lucene",
+                            "parameters": {
+                                "ef_construction": 100,
+                                "m": 16
+                            }
+                        }
                     }
                 }
                 properties.update(
@@ -102,10 +157,15 @@ class SenderVectorDB:
                     }
                 )
                 body = {
-                    "mappings": {
-                        "properties": properties
-                    }
-                }
+                        "settings": {
+                            "index": {
+                                "knn": True
+                            }
+                        },
+                        "mappings": {
+                            "properties": properties
+                        }
+                } 
                 self.db.indices.create(
                     index=self.index_name_db,
                     body=body
@@ -125,12 +185,17 @@ class SenderVectorDB:
         :param df: Input pandas DataFrame with vector and metadata columns
         """
         self.create_index()
+        ids_in_db = self.get_all_id_data()
         documents = df[[self.vector_col] +
                        self.other_cols].to_dict(orient="records")
         ids = df[self.index_col].to_list()
         for id_doc, doc in zip(ids, documents):
-            self.db.index(
-                index=self.index_name_db,
-                id=id_doc,
-                body=doc
-            )
+            if id_doc not in ids_in_db:
+                try:
+                    self.db.index(
+                        index=self.index_name_db,
+                        id=id_doc,
+                        body=doc
+                    )
+                except Exception:
+                    logger.error(f"This doc not working:{id_doc} with values: {doc}")

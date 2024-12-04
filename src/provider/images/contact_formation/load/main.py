@@ -20,10 +20,19 @@ def main():
                                        date.strftime(schema),  'formations.parquet')
     df = pd.read_parquet(processed_data_path)
     logger.error("Init database vector")
-    sender = SenderVectorDB()
+    sender = SenderVectorDB(
+            index_col="id",
+            env_name_index="INDEX_FORMATION",
+            other_cols=[
+                "nom_formation", "domaine_formation",
+                "niveau_formation", "presentation_formation", "contenu_formation",
+                "url_fiche_formation", "mail_responsables", "universite",
+                "ville", "url"
+            ]
+    )
 
     logger.error("Extract vector")
-    sender.add_vector(
+    df = sender.add_vector(
         df=df, col="nom_formation"
     )
 
