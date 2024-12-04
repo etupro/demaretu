@@ -1,9 +1,10 @@
-from utils.db_manager import ANNUAIRE_DB, POST_DB
+from utils.db_manager import POST_DB
 import streamlit as st
 from sqlalchemy import text
 import pandas as pd
+import logging
 
-# Doc: https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data
+logger = logging.getLogger(__name__)
 
 
 @st.cache_data
@@ -21,11 +22,3 @@ def get_post_db():
     posts = pd.DataFrame(posts)
     posts["tasks"] = ''
     return posts
-
-
-@st.cache_data
-def get_formation_db():
-    annuaire_db = next(ANNUAIRE_DB.get_db())
-    formations = annuaire_db.execute(
-        text("select * from partenaire.public.formations"))
-    return pd.DataFrame(formations)
