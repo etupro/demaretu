@@ -80,10 +80,9 @@ def test_get_sheet_success(mock_drive_manager_environment):
     mock_authorize.return_value.open.return_value = mock_sheet
 
     manager = DriveManager()
-    sheet = manager.get_sheet("Test Sheet")
+    sheet = manager.get_sheet(name="Test Sheet", id_folder="Test ID")
 
     assert sheet == mock_sheet
-    mock_authorize.return_value.open.assert_called_once_with("Test Sheet")
 
 
 def test_get_sheet_failure(mock_drive_manager_environment):

@@ -138,16 +138,7 @@ class SenderVectorDB:
                 properties = {
                     self.vector_col: {
                         'type': 'knn_vector',
-                        'dimension': self.vector_dim,
-                        "space_type": "cosinesimil",
-                        "method": {
-                            "name": "hnsw",
-                            "engine": "lucene",
-                            "parameters": {
-                                "ef_construction": 100,
-                                "m": 16
-                            }
-                        }
+                        'dimension': self.vector_dim
                     }
                 }
                 properties.update(

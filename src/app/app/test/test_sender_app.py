@@ -1,9 +1,9 @@
 import pytest
-import conftest
+import conf_test
 from unittest.mock import patch
 from sentence_transformers import SentenceTransformer
 import pandas as pd
-from sender import SenderVectorDB
+from utils.sender import SenderVectorDB
 
 
 @pytest.fixture
