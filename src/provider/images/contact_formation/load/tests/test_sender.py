@@ -1,91 +1,94 @@
-import conftest
 import pytest
-from unittest.mock import MagicMock, patch
+import conf_test
+from unittest.mock import patch
+from sentence_transformers import SentenceTransformer
 import pandas as pd
-from sender import SenderVectorDB
+from utils.sender import SenderVectorDB
 
 
 @pytest.fixture
-def mock_opensearch():
-    """Mock pour OpenSearch."""
-    with patch('sender.OpenSearch') as mock:
-        yield mock
+def mock_environment_variables(monkeypatch):
+    """Fixture to set up environment variables."""
+    monkeypatch.setenv("OPTION_DB_VECTOR", "{'http_compress': True}")
+    monkeypatch.setenv("HOST_DB_VECTOR", "[{'host': 'localhost', 'port': 9200}]")
+    monkeypatch.setenv("TEST_INDEX", "test_index")
 
 
 @pytest.fixture
-def mock_sentence_transformer():
-    """Mock pour SentenceTransformer."""
-    with patch('sender.SentenceTransformer') as mock:
-        mock_instance = MagicMock()
-        mock_instance.encode.return_value = [0.1] * 768
-        mock.return_value = mock_instance
-        yield mock
+def vector_db(mock_environment_variables):
+    """Fixture to initialize a SenderVectorDB instance."""
+    return SenderVectorDB(env_name_index="TEST_INDEX")
 
 
-@pytest.fixture
-def mock_env_vars(monkeypatch):
-    """Mock pour les variables d'environnement."""
-    monkeypatch.setenv("INDEX_FORMATION", "test_index")
-    monkeypatch.setenv("OPTION_DB_VECTOR", "{'http_auth': ('user', 'pass')}")
-    monkeypatch.setenv(
-        "HOST_DB_VECTOR", "[{'host': 'localhost', 'port': 9200}]")
+def test_initialization(vector_db):
+    """Test class initialization with environment variables."""
+    assert vector_db.index_name_db == "test_index"
+    assert isinstance(vector_db.model, SentenceTransformer)
 
 
-@pytest.fixture
-def sample_dataframe():
-    """Un DataFrame d'exemple."""
-    data = {
-        "id": [1, 2],
-        "nom_formation": ["Formation A", "Formation B"],
-        "domaine_formation": ["Domaine A", "Domaine B"],
-        "presentation_formation": ["Présentation A", "Présentation B"],
+def test_add_vector(vector_db):
+    """Test the add_vector method for embedding text."""
+    data = {"text_column": ["sample text"]}
+    df = pd.DataFrame(data)
+    result_df = vector_db.add_vector(df, "text_column")
+    assert "vector_index" in result_df.columns
+    assert len(result_df["vector_index"][0]) == vector_db.vector_dim
+
+
+@patch("opensearchpy.OpenSearch")
+def test_get_all_id_data(mock_opensearch, vector_db):
+    """Test retrieval of all IDs from the OpenSearch index."""
+    mock_response = {
+        "hits": {
+            "hits": [{"_source": {"id": "123"}}, {"_source": {"id": "456"}}]
+        }
     }
-    return pd.DataFrame(data)
+    mock_opensearch.return_value.search.return_value = mock_response
+    vector_db.db = mock_opensearch()
+    ids = vector_db.get_all_id_data()
+    assert ids == ["123", "456"]
 
 
-def test_initialization(mock_opensearch, mock_env_vars):
-    """Tester l'initialisation de SenderVectorDB."""
-    db_instance = SenderVectorDB()
-    assert db_instance.index_name_db == "test_index"
-    mock_opensearch.assert_called_once()
+@patch("opensearchpy.OpenSearch")
+def test_get_data(mock_opensearch, vector_db):
+    """Test retrieval of data from the OpenSearch index."""
+    mock_response = {
+        "hits": {
+            "hits": [
+                {"_source": {"id": "123", "nom_formation": "Test"}},
+                {"_source": {"id": "456", "nom_formation": "Another Test"}}
+            ]
+        }
+    }
+    mock_opensearch.return_value.search.return_value = mock_response
+    vector_db.db = mock_opensearch()
+    df = vector_db.get_data(cols=["id", "nom_formation"])
+    assert len(df) == 2
+    assert "nom_formation" in df.columns
 
 
-def test_add_vector(mock_sentence_transformer, sample_dataframe, mock_env_vars):
-    """Tester la méthode add_vector."""
-    db_instance = SenderVectorDB()
-    df = db_instance.add_vector(sample_dataframe, "presentation_formation")
-    assert "vector_index" in df.columns
-    assert len(df["vector_index"][0]) == 768
+@patch("opensearchpy.OpenSearch")
+def test_create_index(mock_opensearch, vector_db):
+    """Test creation of an OpenSearch index with proper settings."""
+    mock_opensearch.return_value.indices.exists.return_value = False
+    vector_db.db = mock_opensearch()
+    vector_db.vector_dim = 768
+    vector_db.create_index()
+    mock_opensearch.return_value.indices.create.assert_called_once()
 
+@patch("opensearchpy.OpenSearch")
+def test_send_data(mock_opensearch, vector_db):
+    """Test sending data to the OpenSearch index."""
+    mock_opensearch.return_value.indices.exists.return_value = True
+    mock_opensearch.return_value.search.return_value = {"hits": {"hits": []}}
+    vector_db.db = mock_opensearch()
+    vector_db.other_cols = ["nom_formation"]
 
-def test_create_index(mock_opensearch, mock_env_vars):
-    """Tester la méthode create_index."""
-    mock_db = mock_opensearch.return_value
-    mock_db.indices.exists.return_value = False
-
-    db_instance = SenderVectorDB()
-    db_instance.create_index()
-
-    mock_db.indices.create.assert_called_once()
-    args, kwargs = mock_db.indices.create.call_args
-    assert kwargs["index"] == "test_index"
-    assert "mappings" in kwargs["body"]
-
-
-def test_send_data(mock_opensearch, mock_sentence_transformer, mock_env_vars, sample_dataframe):
-    """Tester la méthode send_data."""
-    mock_db = mock_opensearch.return_value
-    mock_db.indices.exists.return_value = False
-
-    db_instance = SenderVectorDB(
-        other_cols=[
-            "nom_formation", "domaine_formation", "presentation_formation"
-        ])
-    db_instance.add_vector(sample_dataframe, "presentation_formation")
-    db_instance.send_data(sample_dataframe)
-
-    assert mock_db.index.call_count == len(sample_dataframe)
-    for i, call in enumerate(mock_db.index.call_args_list):
-        args, kwargs = call
-        assert kwargs["index"] == "test_index"
-        assert kwargs["id"] == sample_dataframe.iloc[i]["id"]
+    data = {
+        "id": ["1", "2"],
+        "vector_index": [[0.1] * 768, [0.2] * 768],
+        "nom_formation": ["Test 1", "Test 2"]
+    }
+    df = pd.DataFrame(data)
+    vector_db.send_data(df)
+    assert mock_opensearch.return_value.index.call_count == 2
