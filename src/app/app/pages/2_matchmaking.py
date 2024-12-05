@@ -6,12 +6,20 @@ from jinja2 import Template
 import os
 import pandas as pd
 
-# Configuration du logger
+# Logger configuration
 logger = logging.getLogger(__name__)
 
-# Get ressource
+# Page configuration
+st.set_page_config(page_title="Matchmaking de post-formation")
+
+# Constants
+MATCH_PHASE_KEY = "match_phase"
+DATA_STORAGE_KEY = "data_storage"
+
+# Resource initialization
 drive_client = get_drive()
 
+# Initialize databases for posts and formations
 posts_db = get_vectorial_db(
     env_name_index="INDEX_POST",
     index_col="id",
@@ -32,40 +40,65 @@ formations_db = get_vectorial_db(
     ]
 )
 
+# Retrieve post data
 data_post = posts_db.get_data()
 
 
+# --- Utility Functions ---
 def change_phase():
-    st.session_state.match_phase = False
-    logger.debug("Turn off: match_phase")
+    """
+    Switches the application phase from matching to the next step.
+    Updates the session state to signal the matching phase is completed.
+    """
+    st.session_state[MATCH_PHASE_KEY] = False
+    logger.debug("Turned off: match_phase")
 
 
-def format_mail(content, data):
-    template_str = Template(content)
-    return template_str.render(data)
+def format_mail(content: str, data: dict):
+    """
+    Formats email content using a Jinja2 template.
+
+    Parameters:
+    - content (str): Template string for the email.
+    - data (dict): Dictionary containing data for populating the template.
+
+    Returns:
+    - str: Formatted email content, or an error message if formatting fails.
+    """
+    try:
+        template_str = Template(content)
+        return template_str.render(data)
+    except Exception as e:
+        logger.error(f"Error formatting email: {e}")
+        st.error("An error occurred while formatting the email.")
+        return ""
 
 
-# Initialisation des états de session
-if "match_phase" not in st.session_state:
-    st.session_state.match_phase = True
-    logger.debug("Initiate var: match_phase")
+def initialize_session_state(key: str, default_value):
+    """
+    Initializes a key in `st.session_state` with a default value, if not already set.
+
+    Parameters:
+    - key (str): The key to initialize in the session state.
+    - default_value: The default value to assign if the key does not exist.
+    """
+    if key not in st.session_state:
+        st.session_state[key] = default_value
+        logger.debug(f"Initialized session state key: {key} with value: {default_value}")
 
 
-# Initialisation des états de session
-if "data_storage" not in st.session_state:
-    st.session_state.data_storage = {}
-    logger.debug("Initiate var: data_storage")
+# --- Initialization ---
+initialize_session_state(MATCH_PHASE_KEY, True)
+initialize_session_state(DATA_STORAGE_KEY, {})
 
-# page
-if st.session_state.match_phase and\
-    ((len(st.session_state.data_storage.values()) == 0)\
-    or any([
-            len(post_tasks["proposal"]) == 0
-            for post_tasks in st.session_state.data_storage.values()
-        ])
-    ):
+
+# --- Interface Logic ---
+if st.session_state[MATCH_PHASE_KEY] and (
+    not st.session_state[DATA_STORAGE_KEY] or
+    any(len(post_tasks["proposal"]) == 0 for post_tasks in st.session_state[DATA_STORAGE_KEY].values())
+):
+
     for idx, post in enumerate(data_post.to_dict(orient="records")):
-
         proposal = formations_db.get_data(
             settings_index={
                 "size": 100,
@@ -84,14 +117,15 @@ if st.session_state.match_phase and\
             }
         )
 
-        if idx not in st.session_state.data_storage.keys():
-            st.session_state.data_storage[idx] = {
+        if idx not in st.session_state[DATA_STORAGE_KEY]:
+            st.session_state[DATA_STORAGE_KEY][idx] = {
                 "title": post["title"],
                 "number_departement": post["number_departement"],
                 "tasks": post["tasks"],
                 "proposal": [],
                 "df": proposal
             }
+
         title = post["title"]
         number_departement = post["number_departement"]
         tasks = post["tasks"]
@@ -99,84 +133,83 @@ if st.session_state.match_phase and\
 ## {title} - {number_departement}
 {tasks}
         """)
+
         name_formations = st.multiselect(
-            "Choissez les formations les plus adaptées",
-            options=proposal.nom_formation
+            "Select the most suitable formations",
+            options=proposal["nom_formation"]
         )
-        st.session_state.data_storage[idx]["proposal"] = name_formations
-        # TODO: différiencier en fonction des villes
-        # proposal["CP"] = proposal["ville"].map(get_postal_code)
-        st.dataframe(proposal[proposal.nom_formation.isin(name_formations)])
+        st.session_state[DATA_STORAGE_KEY][idx]["proposal"] = name_formations
+
+        st.dataframe(proposal[proposal["nom_formation"].isin(name_formations)])
 
         with st.expander("Debug section"):
-            st.json(str(st.session_state.data_storage[idx]))
+            st.json(str(st.session_state[DATA_STORAGE_KEY][idx]))
 
-    if st.button(
-        "Crée ou remplir le sheet de contact mail ?",
-        use_container_width=True
-    ):
-        if all([
-            len(post_tasks["proposal"]) > 0
-            for post_tasks in st.session_state.data_storage.values()
-        ]):
+    if st.button("Create or fill the contact email sheet?", use_container_width=True):
+        if all(len(post_tasks["proposal"]) > 0 for post_tasks in st.session_state[DATA_STORAGE_KEY].values()):
             change_phase()
         else:
-            st.error("Attention toutes les tâches n'ont pas de formation associcées")
+            st.error("All tasks must have an associated formation.")
 else:
     all_proposals = reverse_proposal(
         formations_db=formations_db,
-        all_posts=st.session_state.data_storage
+        all_posts=st.session_state[DATA_STORAGE_KEY]
     )
-    with open("/home/romain/Documents/association/demaretu/data/template_mails/4-12-2024-init.txt", mode="r") as f:
-        doc = f.read()
-    st.markdown("""
-# Redaction des mails
 
-Ajouter les variables suivantes à votre dispositions dans le contenu du templates de la manière suivantes:
+    try:
+        TEMPLATE_MAIL_PATH = os.environ["PATH_FILE_TEMPLATE"]
+        with open(TEMPLATE_MAIL_PATH, mode="r") as f:
+            default_template = f.read()
+    except FileNotFoundError:
+        st.error(f"Email template not found: {TEMPLATE_MAIL_PATH}")
+        default_template = ""
+
+    st.markdown("""
+# Rédaction des mails
+
+Ajoutez les variables suivantes dans votre contenu de template :
 
     Bonjour {{ detail.responsable }}
 
     Blablabla
     {% for task in tasks %}
-    - {{task.title}} pour la missions: {{task.tasks}}
+    - {{task.title}} pour la mission : {{task.tasks}}
     {% endfor %}
-    blablabla
-
-En accord avec les noms de variables ci dessous (comme tasks, ville, etc...) 
-                
+    Blablabla
 ---               
-""")
-    st.json(list(all_proposals.values())[0])
+    """)
 
-    template = st.text_area("Templates mail", value=doc)
+    template = st.text_area("Email Template", value=default_template)
 
     all_mail_content = []
     for responsable, dico in all_proposals.items():
         st.markdown(f"""
 ---
-                    
 ## Responsable {responsable}
 
-Voici le contenu du mail:
-""")
+Voici le contenu du mail :
+        """)
         content = st.text_area(
-            label=f"Exemple de contenu modifiable pour {responsable}",
-            value=format_mail(
-                content=template,
-                data=dico
-            )
+            label=f"Editable content example for {responsable}",
+            value=format_mail(content=template, data=dico)
         )
         all_mail_content.append({
-            "nom_responsable": responsable,
+            "responsible_name": responsable,
             "content": content
         })
 
-    if st.button("Finito ?"):
+    if st.button("Finalize?"):
         df = pd.DataFrame(all_mail_content)
-        gs = drive_client.get_sheet(
+
+        try:
+            gs = drive_client.get_sheet(
                 name=os.environ['NAME_SHEET_FORMATION'],
                 id_folder=os.environ['ID_FOLDER_DEMAREDU']
-        )
-        sh1 = gs.sheet1
-        file = sh1.get_values() + df.to_numpy().tolist()
-        sh1.update(file, 'A2')
+            )
+            sh1 = gs.sheet1
+            file = sh1.get_values() + df.to_numpy().tolist()
+            sh1.update(file, 'A1')
+            st.success("Data has been successfully updated.")
+        except Exception as e:
+            logger.error(f"Error writing to Google Sheets: {e}")
+            st.error("An error occurred while writing to Google Sheets.")

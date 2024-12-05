@@ -2,90 +2,85 @@ import streamlit as st
 from streamlit_utils.cache_data import get_post_db
 from streamlit_utils.cache_ressource import get_vectorial_db
 import logging
-import os
 from hashlib import md5
 
-# Configuration du logger
+# Logger configuration
 logger = logging.getLogger(__name__)
 
-# Configuration de la page
+# Page configuration
 st.set_page_config(page_title="Formattage des posts")
 
-# Initialisation des états de session
+# Initialize session states
 if "index_post" not in st.session_state:
     st.session_state.index_post = 0
-    logger.debug("Initialisation de index_post à 0")
+    logger.debug("Initialized index_post to 0")
 
 if "only_one_modify" not in st.session_state:
     st.session_state.only_one_modify = False
-    logger.debug("Initialisation de only_one_modify à False")
+    logger.debug("Initialized only_one_modify to False")
 
 if "posts" not in st.session_state:
     try:
         st.session_state.posts = get_post_db()
-        logger.info("Chargement des posts depuis la base de données.")
+        logger.info("Loaded posts from the database.")
     except Exception as e:
-        logger.error(f"Erreur lors du chargement des posts : {e}")
+        logger.error(f"Error loading posts: {e}")
         st.error(
-            "Une erreur est survenue lors du chargement des données. Veuillez réessayer.")
+            "Une erreur est survenue lors du chargement des données. Veuillez réessayer."
+        )
         st.stop()
 
-# Fonctions utilitaires
+# Utility functions
 
 
 def next_index():
     """
-    Passe à l'index suivant. Si only_one_modify est activé, passe à la fin de la liste.
+    Move to the next index. If only_one_modify is enabled, skip to the end of the list.
     """
     if st.session_state.only_one_modify:
         st.session_state.index_post = len(st.session_state.posts)
-        logger.info("Mode 'only_one_modify' activé : index réglé à la fin.")
+        logger.info("Mode 'only_one_modify' enabled: index set to the end.")
     else:
         st.session_state.index_post += 1
-        logger.debug(f"Index avancé à {st.session_state.index_post}.")
+        logger.debug(f"Advanced index to {st.session_state.index_post}.")
 
 
 def save_post(content: str, tasks: list):
     """
-    Sauvegarde les modifications d'un post.
+    Save the modifications of a post.
 
     Args:
-        content (str): Description du post.
-        tasks (list): Liste des tâches associées.
+        content (str): Post description.
+        tasks (list): List of associated tasks.
     """
     try:
-        st.session_state.posts.loc[st.session_state.index_post,
-                                   "content"] = content
-        st.session_state.posts.loc[st.session_state.index_post, "tasks"] = str(
-            tasks)
-        st.success("Les modifications ont été sauvegardées.")
-        logger.info(
-            f"Post {st.session_state.index_post} sauvegardé avec succès.")
+        st.session_state.posts.loc[st.session_state.index_post, "content"] = content
+        st.session_state.posts.loc[st.session_state.index_post, "tasks"] = str(tasks)
+        st.success("Changes have been saved.")
+        logger.info(f"Post {st.session_state.index_post} successfully saved.")
     except Exception as e:
-        logger.error(
-            f"Erreur lors de la sauvegarde du post {st.session_state.index_post} : {e}")
+        logger.error(f"Error saving post {st.session_state.index_post}: {e}")
         st.error("Erreur lors de la sauvegarde. Veuillez réessayer.")
 
 
 def modify_post(idx):
     """
-    Passe en mode modification d'un post spécifique.
+    Enter edit mode for a specific post.
 
     Args:
-        idx (int): Index du post à modifier.
+        idx (int): Index of the post to modify.
     """
     st.session_state.index_post = idx
     st.session_state.only_one_modify = True
-    logger.info(f"Modification du post à l'index {idx} activée.")
+    logger.info(f"Edit mode activated for post at index {idx}.")
 
 # #### #### #### #### #### #### #### Page #### #### #### #### #### ####
-
 
 if len(st.session_state.posts) > st.session_state.index_post:
     have_to_expanded = (not st.session_state.only_one_modify) and (
         st.session_state.index_post == 0)
 
-    with st.expander("Explication", expanded=have_to_expanded):
+    with st.expander("Explanation", expanded=have_to_expanded):
         st.markdown("""
         # Formattage des posts
         ## Description
@@ -98,14 +93,14 @@ if len(st.session_state.posts) > st.session_state.index_post:
         * Mission 2
         
         **Exemple acceptable** :
-        ```
-        Une entreprise fait :
+        
+Une entreprise fait :
         - De la mise en rayon
         - Trie les articles
         Elle souhaite engager des étudiants pour :
         * Communication
         * Création d'un site web
-        ```
+
         **Attention** : Utilisez '-' pour les puces dans la description et '*' pour les tâches.
         """)
 
@@ -120,8 +115,7 @@ if len(st.session_state.posts) > st.session_state.index_post:
         elif isinstance(eval(post.tasks), list):
             tasks_content = "*" + "*".join(eval(post.tasks))
         else:
-            raise ValueError(
-                f"Type inattendu pour post.tasks : {type(post.tasks)}")
+            raise ValueError(f"Unexpected type for post.tasks: {type(post.tasks)}")
 
         content = st.text_area(
             label="Description",
@@ -145,8 +139,9 @@ if len(st.session_state.posts) > st.session_state.index_post:
 
     except Exception as e:
         logger.error(
-            f"Erreur lors de l'affichage ou de la modification du post : {e}")
-        st.error("Une erreur est survenue. Veuillez vérifier le format du post.")
+            f"Error displaying or modifying post: {e}"
+        )
+        st.error("Attention il faut revoir le post")
 else:
     st.markdown("## Récapitulatif de fin !")
     docs = st.session_state.posts.copy()
@@ -177,7 +172,7 @@ else:
         if st.button(f"Reprendre le post {idx}"):
             modify_post(idx)
     st.markdown("""---""")
-    if st.button("Sauvez dans la bd ?", use_container_width=True):
+    if st.button("Sauvegarder dans la BD?", use_container_width=True):
         vectorial_db = get_vectorial_db(
             env_name_index="INDEX_POST",
             index_col="id",
@@ -196,4 +191,4 @@ else:
         # Send data
         df = vectorial_db.add_vector(df=docs, col="tasks")
         vectorial_db.send_data(df=docs)
-        st.success("Succed to upload in db !")
+        st.success("Succès pour l'enregistrement !")
