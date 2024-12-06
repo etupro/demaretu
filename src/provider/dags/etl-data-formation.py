@@ -41,7 +41,7 @@ with DAG(
     extract_features = KubernetesPodOperator(
         namespace="airflow",
         task_id="clean-transform-data",
-        image="leutergmail/transform-data-formation",
+        image="leutergmail/transform-data-formation:latest",
         cmds=["python3", "main.py"],
         on_finish_action="delete_pod",
         volumes=[volume],
@@ -52,7 +52,7 @@ with DAG(
     send_to_database = KubernetesPodOperator(
         namespace="airflow",
         task_id="send-to-opensearch",
-        image="leutergmail/load-data-formation",
+        image="leutergmail/load-data-formation:latest",
         cmds=["python3", "main.py"],
         secrets=secret_opensearch,
         volumes=[volume],
