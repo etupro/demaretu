@@ -3,3 +3,4 @@ pandas==2.2.2
 opensearch-py==2.4.2
 sentence-transformers==3.3.0
 python-dotenv==1.0.1
+pyarrow==18.1.0
