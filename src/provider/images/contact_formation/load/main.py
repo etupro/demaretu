@@ -16,24 +16,20 @@ def main():
         logger.error("No data found")
         raise FileNotFoundError("Error: No processed data in directory")
 
-    processed_data_path = os.path.join(data_path, "processed",
-                                       date.strftime(schema),  'formations.parquet')
+    processed_data_path = os.path.join(
+        data_path, "processed",
+        date.strftime(schema),  'formations.parquet'
+    )
     df = pd.read_parquet(processed_data_path)
-    logger.error("Init database vector")
+    logger.info("Init database vector")
     sender = SenderVectorDB(
             index_col="id",
             env_name_index="INDEX_FORMATION",
-            other_cols=[
-                "nom_formation", "domaine_formation",
-                "niveau_formation", "presentation_formation", "contenu_formation",
-                "url_fiche_formation", "mail_responsables", "universite",
-                "ville", "url"
-            ]
+            other_cols=df.columns.to_list()
     )
-
-    logger.error("Extract vector")
+    logger.info("Extract vector")
     df = sender.add_vector(
-        df=df, col="nom_formation"
+        df=df, col="domaine"
     )
 
     sender.send_data(df=df)

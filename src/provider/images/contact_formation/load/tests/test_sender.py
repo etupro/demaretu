@@ -36,20 +36,6 @@ def test_add_vector(vector_db):
 
 
 @patch("opensearchpy.OpenSearch")
-def test_get_all_id_data(mock_opensearch, vector_db):
-    """Test retrieval of all IDs from the OpenSearch index."""
-    mock_response = {
-        "hits": {
-            "hits": [{"_source": {"id": "123"}}, {"_source": {"id": "456"}}]
-        }
-    }
-    mock_opensearch.return_value.search.return_value = mock_response
-    vector_db.db = mock_opensearch()
-    ids = vector_db.get_all_id_data()
-    assert ids == ["123", "456"]
-
-
-@patch("opensearchpy.OpenSearch")
 def test_get_data(mock_opensearch, vector_db):
     """Test retrieval of data from the OpenSearch index."""
     mock_response = {

@@ -6,7 +6,7 @@ WORKDIR /app
 
 COPY ./utils ./utils
 COPY ./main.py ./main.py
-COPY ./cleaner.py ./cleaner.py
+COPY ./cleaner ./cleaner
 COPY ./requirements.txt ./requirements.txt
 
 RUN mkdir -p /app/data/to_ingest

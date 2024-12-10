@@ -22,7 +22,10 @@ def main(date):
         # Get data:
         df_raw = pd.read_csv(data_raw_path)
         cf = CleanerFormation(df=df_raw)
-        df_processed = cf()
+        sub_cols = ['id', 'nom_formation', 'domaine', 'niveau',
+                    "spécialisation", 'mail_responsables', 'mails',
+                    'universite', "cp",  "url"]
+        df_processed = cf(sub_cols)
 
         os.makedirs(data_processed_path, exist_ok=True)
         df_processed.to_parquet(os.path.join(
