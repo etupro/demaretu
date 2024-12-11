@@ -15,6 +15,11 @@ st.set_page_config(page_title="Matchmaking de post-formation")
 # Constants
 MATCH_PHASE_KEY = "match_phase"
 DATA_STORAGE_KEY = "data_storage"
+COL_DB = [
+    "nom_formation",  "niveau", "domaine", "spécialisation",
+    "mail_responsables", "mails", "universite",
+    "cp", "url"
+]
 
 # Resource initialization
 drive_client = get_drive()
@@ -32,12 +37,7 @@ posts_db = get_vectorial_db(
 formations_db = get_vectorial_db(
     index_col="id",
     env_name_index="INDEX_FORMATION",
-    other_cols=[
-        "nom_formation", "domaine_formation",
-        "niveau_formation", "presentation_formation", "contenu_formation",
-        "url_fiche_formation", "mail_responsables", "universite",
-        "ville", "url"
-    ]
+    other_cols=COL_DB
 )
 
 # Retrieve post data
@@ -66,8 +66,7 @@ def format_mail(content: str, data: dict):
     - str: Formatted email content, or an error message if formatting fails.
     """
     try:
-        template_str = Template(content)
-        return template_str.render(data)
+        return Template(content).render(data)
     except Exception as e:
         logger.error(f"Error formatting email: {e}")
         st.error("An error occurred while formatting the email.")
@@ -99,19 +98,23 @@ if st.session_state[MATCH_PHASE_KEY] and (
 ):
 
     for idx, post in enumerate(data_post.to_dict(orient="records")):
+        ## TODO: Récuperer le cp du post
         proposal = formations_db.get_data(
             settings_index={
                 "size": 100,
-                "_source": [
-                    "nom_formation", "domaine_formation", "niveau_formation",
-                    "mail_responsables", "ville"
-                ],
-                "query": {
-                    "knn": {
-                        "vector_index": {
-                            "vector": post["vector_index"],
-                            "k": 350
-                        }
+                "_source": COL_DB,
+                "query":  {
+                    "bool": {
+                        "must": [
+                            {"prefix": {"cp": {"value": post["number_departement"]}}},
+                            {"knn": {
+                                    "vector_index": {
+                                        "vector": post["vector_index"],
+                                        "k": 350
+                                    }
+                                }
+                            }
+                        ]
                     }
                 }
             }
@@ -183,6 +186,7 @@ Ajoutez les variables suivantes dans votre contenu de template :
 
     all_mail_content = []
     for responsable, dico in all_proposals.items():
+        mail = dico["detail"]["mail"]
         st.markdown(f"""
 ---
 ## Responsable {responsable}
@@ -195,7 +199,9 @@ Voici le contenu du mail :
         )
         all_mail_content.append({
             "responsible_name": responsable,
-            "content": content
+            "mail": mail,
+            "content": content,
+            "statut": "A envoyer"
         })
 
     if st.button("Finalize?"):
