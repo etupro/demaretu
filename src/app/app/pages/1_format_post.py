@@ -2,6 +2,7 @@ import streamlit as st
 from streamlit_utils.cache_data import get_post_db
 from streamlit_utils.cache_ressource import get_vectorial_db
 from components.page_1.session_manager import ManagerPage1
+from components.page_1.st_component import modify_content_to_split_in_tasks
 from components.page_1.text import explanation, describe_task
 from hashlib import md5
 import logging
@@ -24,35 +25,6 @@ if "manager" not in st.session_state:
         )
         st.stop()
 
-def rerun():
-    pass
-
-def modify_content_to_split_in_tasks():
-    post = st.session_state.manager.get_post()
-    st.markdown(
-        f"### {st.session_state.manager.index_post}/ **Nom de l'organisation:** {post.title}")
-
-    tasks_content = st.session_state.manager.get_tasks_for_modification(
-        post=post
-        )
-
-    content = st.text_area(
-        label="Description",
-        value=post.content + tasks_content
-    )
-    list_content = content.split("*")
-    desc = list_content[0]
-    tasks = list_content[1:]
-
-    col_right, col_left = st.columns(2)
-    with col_right:
-        st.markdown(f"### Description du post :\n{desc}")
-    with col_left:
-        for idx, t in enumerate(tasks):
-            task = t.strip().replace("-", "").replace("*", "")
-            st.markdown(f"- **Mission {idx + 1}** : {task}")
-    return desc, tasks
-
 
 # #### #### #### #### #### #### #### Page #### #### #### #### #### ####
 if st.session_state.manager.is_finish_posts():
@@ -64,12 +36,11 @@ if st.session_state.manager.is_finish_posts():
         st.markdown(explanation)
 
     try:
-        # FIXME: Ne se met pas à jour !!
         desc, tasks = modify_content_to_split_in_tasks()
-        # TODO: if task_content == "" => no button !
         if st.button(
             label="Next",
-            use_container_width=True
+            use_container_width=True,
+            disabled=(len(tasks) == 0)
         ):
             if st.session_state.manager.save_post(
                 content=desc, tasks=tasks
