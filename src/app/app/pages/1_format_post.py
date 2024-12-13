@@ -24,6 +24,8 @@ if "manager" not in st.session_state:
         )
         st.stop()
 
+def rerun():
+    pass
 
 def modify_content_to_split_in_tasks():
     post = st.session_state.manager.get_post()
@@ -62,10 +64,13 @@ if st.session_state.manager.is_finish_posts():
         st.markdown(explanation)
 
     try:
+        # FIXME: Ne se met pas à jour !!
         desc, tasks = modify_content_to_split_in_tasks()
         # TODO: if task_content == "" => no button !
-        if st.button(label="Next", use_container_width=True):
-            st.text("Index: "+str(st.session_state.manager.get_index()))
+        if st.button(
+            label="Next",
+            use_container_width=True
+        ):
             if st.session_state.manager.save_post(
                 content=desc, tasks=tasks
             ):
@@ -73,7 +78,7 @@ if st.session_state.manager.is_finish_posts():
             else:
                 st.error("Post non sauvegardé")
             st.session_state.manager.next_index()
-            st.text("Index: "+str(st.session_state.manager.get_index()))
+            st.rerun()
 
     except Exception as e:
         logger.error(
