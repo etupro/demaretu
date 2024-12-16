@@ -1,10 +1,10 @@
 import streamlit as st
 from streamlit_utils.cache_data import get_post_db
-from streamlit_utils.cache_ressource import get_vectorial_db
+
 from components.page_1.session_manager import ManagerPage1
 from components.page_1.st_component import modify_content_to_split_in_tasks
 from components.page_1.text import explanation, describe_task
-from hashlib import md5
+
 import logging
 
 # Logger configuration
@@ -73,29 +73,11 @@ else:
             st.session_state.manager.index_to_modify_post(
                     idx=idx
                 )
+            st.rerun()
     st.markdown("""---""")
 
     if st.button("Sauvegarder dans la BD ?", use_container_width=True):
-        vectorial_db = get_vectorial_db(
-            env_name_index="INDEX_POST",
-            index_col="id",
-            other_cols=[
-                'id', 'content', 'title',
-                'updated_at', 'number_departement',
-                'tasks'
-            ]
-        )
-        vectorial_db.create_index()
-        ids = vectorial_db.get_all_id_data()
-        # Prepare data
-        docs = st.session_state.posts.copy()
-        docs.tasks = docs.tasks.map(eval)
-        docs = docs.explode("tasks")
-        docs = docs[['id', 'content', 'title', 'updated_at',
-                     'number_departement', 'tasks']]
-        docs.id = (docs.id.map(str) + docs.tasks)\
-            .map(lambda x: md5(x.encode()).hexdigest())
-        # Send data
-        df = vectorial_db.add_vector(df=docs, col="tasks")
-        vectorial_db.send_data(df=docs)
+        st.session_state.manager.send_to_db(
+            cols=['id', 'content', 'title', 'updated_at',
+                  'number_departement', 'tasks'])
         st.success("Succès pour l'enregistrement !")

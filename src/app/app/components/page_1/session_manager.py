@@ -1,11 +1,13 @@
 import logging
 from pandas import DataFrame, Series
+from streamlit_utils.cache_ressource import get_vectorial_db
+from hashlib import md5
 
 logger = logging.getLogger(__name__)
 
 
 class ManagerPage1:
-    def __init__(self, posts: DataFrame):
+    def __init__(self, posts: DataFrame) -> None:
         self.index_post = 0
         logger.debug("Initialized index_post to 0")
         self.only_one_modify = False
@@ -26,7 +28,7 @@ class ManagerPage1:
         return (not self.only_one_modify) and (self.index_post == 0)
 
     # Management des index:
-    def next_index(self):
+    def next_index(self) -> None:
         """
         Move to the next index. If only_one_modify is enabled, skip to the end of the list.
         """
@@ -37,7 +39,7 @@ class ManagerPage1:
             self.index_post += 1
             logger.debug(f"Advanced index to {self.index_post}.")
 
-    def index_to_modify_post(self, idx: int):
+    def index_to_modify_post(self, idx: int) -> None:
         """
         Enter edit mode for a specific post.
 
@@ -48,7 +50,7 @@ class ManagerPage1:
         self.only_one_modify = True
         logger.info(f"Edit mode activated for post at index {idx}.")
 
-    def get_index(self):
+    def get_index(self) -> None:
         return self.index_post
 
     # Management des posts:
@@ -94,3 +96,19 @@ class ManagerPage1:
             return "*" + "*".join(eval(post.tasks))
         else:
             raise ValueError(f"Unexpected type for post.tasks: {type(post.tasks)}")
+
+    def send_to_db(self, cols: list) -> None:
+        vectorial_db = get_vectorial_db(
+            env_name_index="INDEX_POST",
+            index_col="id",
+            other_cols=cols
+        )
+        vectorial_db.create_index()
+        # Prepare data
+        docs = self.get_post_by_tasks()
+        docs = docs[cols]
+        docs.id = (docs.id.map(str) + docs.tasks)\
+            .map(lambda x: md5(x.encode()).hexdigest())
+        # Send data
+        df = vectorial_db.add_vector(df=docs, col="tasks")
+        vectorial_db.send_data(df=df)
