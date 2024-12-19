@@ -18,7 +18,7 @@ class SessionManager:
         ## Var
         self.match_phase = True
         self.data_storage = {}
-        self.all_mail_content = []
+        self.all_mail_content = {}
         
         ## Class
         self.posts_db = get_vectorial_db(
@@ -111,13 +111,13 @@ class SessionManager:
         try:
             TEMPLATE_MAIL_PATH = os.environ["PATH_FILE_TEMPLATE"]
             with open(TEMPLATE_MAIL_PATH, mode="r") as f:
-                return f.read(), True
+                return f.read(), False
         except FileNotFoundError:
             logger.error(f"Email template not found: {TEMPLATE_MAIL_PATH}")
-            return "", False
+            return "", True
 
     def sent_to_google_sheet(self):
-        df = pd.DataFrame(self.all_mail_content)
+        df = pd.DataFrame(list(self.all_mail_content.values()))
         try:
             gs = self.drive_client.get_sheet(
                 name=os.environ['NAME_SHEET_FORMATION'],
@@ -132,10 +132,9 @@ class SessionManager:
             return False
 
     def add_mail_content(self, content, dico, responsable):
-        self.all_mail_content.append({
+        self.all_mail_content[responsable] = {
             "responsible_name": responsable,
             "mail": dico["detail"]["mail"],
             "content": content,
             "statut": "A envoyer"
-        })
-        
+        }
