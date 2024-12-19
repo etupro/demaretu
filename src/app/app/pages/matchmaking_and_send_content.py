@@ -62,6 +62,7 @@ else:
     template = st.text_area("Email Template", value=default_template)
 
     all_mail_content = []
+
     for responsable, dico in all_proposals.items():
         st.markdown(presentation_content_mail(responsable=responsable))
         content = st.text_area(
