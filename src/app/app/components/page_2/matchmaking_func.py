@@ -19,7 +19,7 @@ def get_postal_code(city: str):
     return li_post
 
 
-def reverse_proposal(self, all_posts):
+def reverse_proposal(self):
     formations = self.formations_db.get_data()
     all_posts = self.get_data()
     formations = formations[[
