@@ -48,7 +48,7 @@ class SessionManager:
         self.all_mail_content = {}
         self.data_post = data_post
 
-    from components.page_2.matchmaking_func import get_postal_code, reverse_proposal
+    from components.page_2.reverse_func import get_postal_code, reverse_proposal
     get_postal_code = staticmethod(get_postal_code)
 
     def all_post_have_formations(self) -> bool:
