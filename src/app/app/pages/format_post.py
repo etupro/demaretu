@@ -11,9 +11,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Initialize session states
-if "manager" not in st.session_state:
+if "page" not in st.session_state:
+    st.session_state.page = 1
+
+if "manager" not in st.session_state or (st.session_state.page != 1):
     try:
         st.session_state.manager = ManagerPage1(posts=get_post_db())
+        st.session_state.page = 1
+        logger.info("Initialized session manager page 1")
         logger.info("Loaded posts from the database.")
     except Exception as e:
         logger.error(f"Error loading posts: {e}")
@@ -46,7 +51,7 @@ if st.session_state.manager.is_finish_posts():
             else:
                 st.error("Post non sauvegardé")
             st.session_state.manager.next_index()
-            st.rerun()
+            st.rerun(scope="fragment")
 
     except Exception as e:
         logger.error(
@@ -70,7 +75,7 @@ else:
             st.session_state.manager.index_to_modify_post(
                     idx=idx
                 )
-            st.rerun()
+            st.rerun(scope="fragment")
     st.markdown("""---""")
 
     if st.button("Sauvegarder dans la BD ?", use_container_width=True):
