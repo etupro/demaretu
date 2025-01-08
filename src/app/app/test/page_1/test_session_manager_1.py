@@ -2,7 +2,7 @@ import conf_test_lvl_2
 import pytest
 import pandas as pd
 from pandas import DataFrame, Series
-from components.page_1.session_manager import ManagerPage1 
+from components.page_1.session_manager import ManagerPage1
 
 
 @pytest.fixture

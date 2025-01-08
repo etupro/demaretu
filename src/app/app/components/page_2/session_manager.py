@@ -6,7 +6,7 @@ from pandas import DataFrame
 logger = logging.getLogger(__name__)
 
 
-class SessionManager:
+class ManagerPage2:
     """
     Manages session data and operations for a matchmaking application.
 

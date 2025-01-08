@@ -2,7 +2,7 @@ import conf_test_lvl_2
 import pytest
 from unittest.mock import mock_open, MagicMock, patch
 from pandas import DataFrame
-from components.page_2.session_manager import SessionManager
+from components.page_2.session_manager import ManagerPage2 as SessionManager
 
 
 @pytest.fixture

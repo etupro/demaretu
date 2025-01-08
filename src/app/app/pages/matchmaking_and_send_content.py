@@ -1,5 +1,5 @@
 import streamlit as st
-from components.page_2.session_manager import SessionManager as SessionManagerPage2
+from components.page_2.session_manager import ManagerPage2 as SessionManager
 from components.page_2.text import present_post_in_markdown, \
     presentation_content_mail, explination_wrtting_template, \
     format_mail
@@ -20,16 +20,16 @@ if "manager" not in st.session_state or (st.session_state.page != 2):
     posts_db = get_vectorial_db(
         index_col="id",
         env_name_index="INDEX_POST",
-        other_cols=SessionManagerPage2.col_post_db
+        other_cols=SessionManager.col_post_db
     )
-    st.session_state.manager = SessionManagerPage2(
+    st.session_state.manager = SessionManager(
         data_post=posts_db.get_data()
     )
     st.session_state.page = 2
     st.session_state.formations_db = get_vectorial_db(
             index_col="id",
             env_name_index="INDEX_FORMATION",
-            other_cols=SessionManagerPage2.col_formation_db
+            other_cols=SessionManager.col_formation_db
     )
     st.session_state.drive_client = get_drive()
     logger.info("Initialized session manager page 2")
