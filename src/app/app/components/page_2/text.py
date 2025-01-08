@@ -15,7 +15,7 @@ Ajoutez les variables suivantes dans votre contenu de template :
     - {{task.title}} pour la mission : {{task.tasks}}
     {% endfor %}
     Blablabla
----               
+---
 """
 
 

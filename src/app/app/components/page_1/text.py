@@ -1,5 +1,4 @@
 from pandas import Series
-import streamlit as st
 import logging
 from typing import Union
 # Logger configuration
@@ -58,5 +57,3 @@ def describe_task(post: Series, idx: int) -> Union[bool, str]:
             f"Erreur lors de l'évaluation des tâches pour le post {idx} : {e}")
     finally:
         return missing_tasks, description_post
-
-
