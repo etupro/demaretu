@@ -71,7 +71,7 @@ if st.session_state.manager.is_matching_step():
             disabled=(not st.session_state.manager.all_post_have_formations())
             ):
         st.session_state.manager.change_phase()
-        st.rerun(scope="fragment")
+        st.rerun()
 
 else:
     all_proposals = st.session_state.manager.reverse_proposal(
@@ -103,7 +103,7 @@ else:
 
     if st.button("Revenir à l'étape précédente ?"):
         st.session_state.manager.change_phase()
-        st.rerun(scope="fragment")
+        st.rerun()
 
     if st.button("Envoyer sur le google sheet ?"):
         is_send = st.session_state.manager.sent_to_google_sheet(

@@ -26,7 +26,8 @@ class ManagerPage2:
     ]
     col_post_db = [
         'id', 'content', 'title',
-        'updated_at', 'number_departement', 'tasks'
+        'updated_at', 'number_departement',
+        'tasks', 'status'
     ]
 
     def __init__(self, data_post: DataFrame, col_post_db: list = None, col_formation_db: list = None) -> None:
@@ -136,21 +137,34 @@ class ManagerPage2:
         Returns:
             DataFrame: DataFrame containing the recommended formations.
         """
+        if not isinstance(post["number_departement"], type(None)):
+            search_case = [
+                {"prefix": {"cp": {"value": post["number_departement"]}}},
+                {"knn": {
+                    "vector_index": {
+                        "vector": post["vector_index"],
+                        "k": 350
+                    }
+                }}
+            ]
+        else:
+            search_case = [
+                {"knn": {
+                    "vector_index": {
+                        "vector": post["vector_index"],
+                        "k": 350
+                    }
+                }}
+            ]
+            title=post["title"]
+            logger.warning(f"No departement found for post: {title}")
         return formations_db.get_data(
             settings_index={
                 "size": 100,
                 "_source": self.col_formation_db,
                 "query": {
                     "bool": {
-                        "must": [
-                            {"prefix": {"cp": {"value": post["number_departement"]}}},
-                            {"knn": {
-                                "vector_index": {
-                                    "vector": post["vector_index"],
-                                    "k": 350
-                                }
-                            }}
-                        ]
+                        "must": search_case
                     }
                 }
             }
