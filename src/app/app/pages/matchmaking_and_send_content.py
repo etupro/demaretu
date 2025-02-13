@@ -17,13 +17,15 @@ if "page" not in st.session_state:
     st.session_state.page = 2
 
 if "manager" not in st.session_state or (st.session_state.page != 2):
-    posts_db = get_vectorial_db(
+    st.session_state.post_db = get_vectorial_db(
         index_col="id",
         env_name_index="INDEX_POST",
         other_cols=SessionManager.col_post_db
     )
+    data_post = st.session_state.post_db.get_data()
+    data_post = data_post[data_post.status == "FORMATTED"]
     st.session_state.manager = SessionManager(
-        data_post=posts_db.get_data()
+        data_post=data_post
     )
     st.session_state.page = 2
     st.session_state.formations_db = get_vectorial_db(
@@ -109,6 +111,7 @@ else:
         is_send = st.session_state.manager.sent_to_google_sheet(
             st.session_state.drive_client
         )
+        st.session_state.manager.change_posts_status(st.session_state.post_db)
         if is_send:
             st.success("Les données ont bien été enregistrés.")
         else:

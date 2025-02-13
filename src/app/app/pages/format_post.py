@@ -16,7 +16,13 @@ if "page" not in st.session_state:
 
 if "manager" not in st.session_state or (st.session_state.page != 1):
     try:
-        st.session_state.manager = ManagerPage1(posts=get_post_db())
+        st.session_state.manager = ManagerPage1()
+        list_id = st.session_state.manager.get_to_raw_id()
+        posts = get_post_db()
+        st.session_state.manager.set_post_dataset(
+            posts=posts,
+            ids_already_done=list_id
+        )
         st.session_state.page = 1
         logger.info("Initialized session manager page 1")
         logger.info("Loaded posts from the database.")
@@ -51,14 +57,14 @@ if st.session_state.manager.is_finish_posts():
             else:
                 st.error("Post non sauvegardé")
             st.session_state.manager.next_index()
-            st.rerun(scope="fragment")
+            st.rerun()
 
     except Exception as e:
         logger.error(
             f"Error displaying or modifying post: {e}"
         )
         st.error("Attention il faut revoir le post")
-else:
+elif not st.session_state.manager.not_post_to_format():
     st.markdown("## Récapitulatif de fin !")
     docs = st.session_state.manager.get_post_by_tasks()
     st.dataframe(docs[docs.columns[::-1]])
@@ -75,11 +81,13 @@ else:
             st.session_state.manager.index_to_modify_post(
                     idx=idx
                 )
-            st.rerun(scope="fragment")
+            st.rerun()
     st.markdown("""---""")
 
     if st.button("Sauvegarder dans la BD ?", use_container_width=True):
         st.session_state.manager.send_to_db(
-            cols=['id', 'content', 'title', 'updated_at',
-                  'number_departement', 'tasks'])
+            cols=['raw_id', 'content', 'title', 'updated_at',
+                  'number_departement', 'tasks', "status"])
         st.success("L'enregistrement a été fait avec succès !")
+else:
+    st.success("Aucun post est à faire !")

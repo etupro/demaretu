@@ -15,12 +15,13 @@ class ManagerPage1:
     vectorial database for further indexing and analysis.
 
     Attributes:
-        posts (DataFrame): A DataFrame containing posts with columns such as "id", 
-                           "content", and "tasks".
         index_post (int): The current index of the post being managed.
         only_one_modify (bool): A flag indicating if the user is modifying a single post.
 
     Methods:
+        set_post_dataset() -> None:
+            Set post dataframe
+
         is_finish_posts() -> bool:
             Checks if there are more posts left to process.
 
@@ -55,7 +56,7 @@ class ManagerPage1:
             Sends the post data to a vectorial database for indexing.
     """
 
-    def __init__(self, posts: DataFrame) -> None:
+    def __init__(self) -> None:
         """
         Initializes the ManagerPage1 instance.
 
@@ -70,10 +71,33 @@ class ManagerPage1:
         logger.debug("Initialized index_post to 0")
         self.only_one_modify = False
         logger.debug("Initialized only_one_modify to False")
+
+    def set_post_dataset(self, posts: DataFrame, ids_already_done: list = None
+                         ):
+        """
+        Set the dataframe post.
+
+        Args:
+            posts (DataFrame): A DataFrame containing posts with columns such as "id",
+                           "content", and "tasks".
+            id_already_done (list): A list of post id that already formatted. 
+
+        Raises:
+            AttributeError: If the provided DataFrame is empty or None.
+        """
+        if "raw_id" in posts.columns:
+            basic_size = posts.shape[0]
+            posts["raw_id"] = posts["raw_id"].astype(int)
+            posts = posts[~posts["raw_id"].isin(ids_already_done)]
+        
         if posts is not None and posts.shape[0] != 0:
             self.posts = posts
             len_post = posts.shape[0]
             logger.info(f"Loaded {len_post} posts from the database.")
+        elif basic_size != 0:
+            self.posts = []
+            len_post = 0
+            logger.info("All post are already posted !")
         else:
             logger.error("No post found")
             raise AttributeError("No post found")
@@ -87,6 +111,16 @@ class ManagerPage1:
         """
         logger.debug(f"is_finish_posts => index post {self.index_post} and len(self.posts): {len(self.posts)}")
         return len(self.posts) > self.index_post
+
+    def not_post_to_format(self) -> bool:
+        """
+        Checks whether there are more posts to process.
+
+        Returns:
+            bool: True if there are remaining posts; otherwise, False.
+        """
+        logger.debug(f"is_finish_posts => index post {self.index_post} and len(self.posts): {len(self.posts)}")
+        return len(self.posts) == 0
 
     def have_to_expanded(self) -> bool:
         """
@@ -206,6 +240,24 @@ class ManagerPage1:
             logger.error("Unexpected type for post.tasks")
             raise ValueError(f"Unexpected type for post.tasks: {type(post.tasks)}")
 
+    def get_to_raw_id(self) -> None:
+        """
+        Sends post data to a vectorial database for indexing.
+
+        Args:
+            cols (list): A list of columns to include when sending data to the database.
+        """
+        vectorial_db = get_vectorial_db(
+            env_name_index="INDEX_POST",
+            index_col="id",
+            other_cols=["raw_id"]
+        )
+        if vectorial_db.index_exists():
+            df = vectorial_db.get_data()
+            return df["raw_id"].astype(int).to_list()
+        else:
+            return []
+
     def send_to_db(self, cols: list) -> None:
         """
         Sends post data to a vectorial database for indexing.
@@ -216,12 +268,12 @@ class ManagerPage1:
         vectorial_db = get_vectorial_db(
             env_name_index="INDEX_POST",
             index_col="id",
-            other_cols=cols
+            other_cols=["id"] + cols
         )
         vectorial_db.create_index()
         docs = self.get_post_by_tasks()
         docs = docs[cols]
-        docs.id = (docs.id.map(str) + docs.tasks)\
+        docs["id"] = (docs.raw_id.map(str) + docs.tasks)\
             .map(lambda x: md5(x.encode()).hexdigest())
         df = vectorial_db.add_vector(df=docs, col="tasks")
         vectorial_db.send_data(df=df)

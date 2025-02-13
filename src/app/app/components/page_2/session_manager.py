@@ -30,7 +30,9 @@ class ManagerPage2:
         'tasks', 'status'
     ]
 
-    def __init__(self, data_post: DataFrame, col_post_db: list = None, col_formation_db: list = None) -> None:
+    def __init__(self, data_post: DataFrame,
+                 col_post_db: list = None, col_formation_db: list = None,
+                 post_db: list = None ) -> None:
         """
         Initializes the SessionManager with provided data and optional column configurations.
 
@@ -156,7 +158,7 @@ class ManagerPage2:
                     }
                 }}
             ]
-            title=post["title"]
+            title = post["title"]
             logger.warning(f"No departement found for post: {title}")
         return formations_db.get_data(
             settings_index={
@@ -265,3 +267,16 @@ class ManagerPage2:
         except Exception as e:
             logger.error(f"Error writing to Google Sheets: {e}")
             return False
+
+    def change_posts_status(self, post_db):
+        """
+        Update the status data to Vectorial DB.
+
+        Args:
+            post_db: Vectorial DB to update status of posts
+
+        Returns:
+            bool: True if the operation is successful, False otherwise.
+        """
+        for i in self.data_post["id"]:
+            post_db.update_data(id_doc=i, params={"doc":{"status": "SENDED"}})
