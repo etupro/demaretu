@@ -85,8 +85,8 @@ class ManagerPage1:
         Raises:
             AttributeError: If the provided DataFrame is empty or None.
         """
-        if "raw_id" in posts.columns:
-            basic_size = posts.shape[0]
+        basic_size = posts.shape[0]
+        if "raw_id" in posts.columns and isinstance(ids_already_done, list):
             posts["raw_id"] = posts["raw_id"].astype(int)
             posts = posts[~posts["raw_id"].isin(ids_already_done)]
         

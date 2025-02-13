@@ -26,17 +26,3 @@ def get_post_db(list_id: list = ""):
     posts["tasks"] = ''
     posts["status"] = 'FORMATTED'
     return posts
-
-def get_raw_id():
-    vectorial_db = get_vectorial_db(
-        env_name_index="INDEX_POST",
-        index_col="id",
-        other_cols=cols
-    )
-    vectorial_db.create_index()
-    docs = self.get_post_by_tasks()
-    docs = docs[cols]
-    docs.id = (docs.id.map(str) + docs.tasks)\
-        .map(lambda x: md5(x.encode()).hexdigest())
-    df = vectorial_db.add_vector(df=docs, col="tasks")
-    vectorial_db.send_data(df=df)
