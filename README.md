@@ -28,11 +28,53 @@ Grandes fonctionnalités attendues:
 
 ### 3/ Architecture:
 
-TODO
+![test](./doc/archi_demaretu.png)
 
 ### 4/ Arboresence:
-
-TODO
+```
+    .
+    ├── app
+    │   ├── app
+    │   │   ├── components
+    │   │   │   ├── page_1
+    │   │   │   └── page_2
+    │   │   ├── pages
+    │   │   ├── streamlit_utils
+    │   │   ├── test
+    │   │   │   ├── page_1
+    │   │   │   └── page_2
+    │   │   └── utils
+    │   ├── kubernetes
+    │   └── notebooks
+    ├── database
+    │   └── kubernetes
+    ├── provider
+    │   ├── dags
+    │   ├── images
+    │   │   ├── contact_entreprise
+    │   │   │   ├── load_to_drive
+    │   │   │   │   ├── notebook
+    │   │   │   │   └── utils
+    │   │   │   └── transform
+    │   │   └── contact_formation
+    │   │       ├── load
+    │   │       │   ├── notebooks
+    │   │       │   ├── tests
+    │   │       │   └── utils
+    │   │       └── transform
+    │   │           ├── cleaner
+    │   │           ├── notebooks
+    │   │           ├── tests
+    │   │           └── utils
+    │   ├── kubernetes
+    │   │   ├── dag_env
+    │   │   └── installation
+    │   └── logs
+    │       ├── dag_processor_manager
+    │       └── scheduler
+    └── RAG
+        └── kubernetes
+```
 
 ### 5/ Rejoindre le projet
 
