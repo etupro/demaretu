@@ -96,6 +96,9 @@ class SenderVectorDB:
         )
         return [h['_source']["id"] for h in response["hits"]["hits"]]
 
+    def index_exists(self) -> bool:
+        return self.db.indices.exists(index=self.index_name_db)
+
     def get_data(self, cols: list = None, settings_index: dict = None):
         if isinstance(cols, list) and all([
                 c in ([self.vector_col, self.index_col] + self.other_cols)
@@ -190,3 +193,11 @@ class SenderVectorDB:
                     )
                 except Exception:
                     logger.error(f"This doc not working:{id_doc} with values: {doc}")
+
+    def update_data(self, id_doc: str, params: dict):
+        try:
+            self.db.update(
+                index=self.index_name_db, id=id_doc, body=params)
+        except Exception:
+            logger.error(
+                f"Cannot update vectorial db: {traceback.format_exc()}")

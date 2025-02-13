@@ -5,6 +5,7 @@ psycopg2==2.9.9
 opensearch-py==2.4.2
 pytest-mock==3.10.0
 pandas==2.2.2
+streamlit==1.38.0
 pyarrow==16.1.0
 sentence_transformers==3.3.0
 torch==2.3.0
